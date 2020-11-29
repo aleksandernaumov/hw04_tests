@@ -1,0 +1,55 @@
+{% extends "include/base.html" %}
+{% block title %} Пост #{{ post.pk }} в сообществе "{{ post.group}}" от автора: {{ post.author.get_full_name }} {% endblock %}
+{% block header %} Пост #{{ post.pk }} в сообществе "{{ post.group}}" от автора: {{ post.author.get_full_name }} {% endblock %}
+
+{% block content %}
+<main role="main" class="container">
+    <div class="row">
+            <div class="col-md-3 mb-3 mt-1">
+                <div class="card">
+                        <div class="card-body">
+                                <div class="h2">
+                                    {{ post.author.get_full_name }}
+                                </div>
+                                <div class="h3 text-muted">
+                                     @{{ post.author }}
+                                </div>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                        <div class="h6 text-muted">
+                                        Подписчиков: XXX <br />
+                                        Подписан: XXX
+                                        </div>
+                                </li>
+                                <li class="list-group-item">
+                                        <div class="h6 text-muted">
+                                            Записей: {{ post.author.posts.count }}
+                                        </div>
+                                </li>
+                        </ul>
+                </div>
+        </div>
+
+        <div class="col-md-9">
+                <div class="card mb-3 mt-1 shadow-sm">
+                        <div class="card-body">
+                                <p class="card-text">
+                                        <a href="/{{ post.author }}/"><strong class="d-block text-gray-dark">@{{ post.author }}</strong></a>                                            
+                                        {{ post.text }} <hr>
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                        <div class="btn-group ">
+													{% if user == post.author %}
+                                                    <a class="btn btn-sm text-muted" href="/{{ post.author }}/{{ post.pk }}/edit" role="button">Редактировать</a>
+													{% endif %}
+                                        </div>
+                                        <small class="text-muted">{{ post.pub_date|date:"d M Y г. H:i" }}</small>
+                                </div>
+                        </div>
+                </div>
+     </div>
+    </div>
+</main>
+
+{% endblock %}
