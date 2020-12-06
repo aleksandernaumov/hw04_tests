@@ -71,9 +71,13 @@ class ViewPagesTests(TestCase):
             'posts/profile.html': (
                 reverse('profile', kwargs={'username': cls.user.username})
             ),
+            'posts/post.html': (
+                reverse('post', kwargs={'username': cls.user.username,
+                'post_id': cls.test_post.id})
+            ),
         }
 
-        cls.new_edit_post_pages = (
+        cls.new_edit_pages = (
             reverse('new_post'),
             reverse('post_edit',
             kwargs={'username': cls.user.username,
@@ -88,51 +92,30 @@ class ViewPagesTests(TestCase):
                 self.assertTemplateUsed(response, template) 
 
 
-    def test_new_edit_posts_pages_uses_correct_template(self):
-        for reverse_name in self.new_edit_post_pages:
+    def test_new_edit_pages_uses_correct_template(self):
+        for reverse_name in self.new_edit_pages:
             with self.subTest(reverse_name=reverse_name):
                 response = self.authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, 'posts/newpost.html') 
 
 
-    def test_page_postslist_show_correct_context(self):
+    def test_posts_pages_show_correct_context(self):
         for template, reverse_name in self.posts_templates_pages.items():
             with self.subTest():
                 response = self.authorized_client.get(reverse_name)
-                response_context = response.context.get('paginator').count
-                self.assertEqual(response_context, 1)
-                response_context_0 = response.context.get('page')[0]
-                post_text_0 = response_context_0.text
-                post_author_0 = response_context_0.author
-                post_group_0 = response_context_0.group
-                self.assertEqual(post_text_0, self.test_post.text)
-                self.assertEqual(post_author_0, self.user)
-                self.assertEqual(post_group_0, self.test_group)
+                if response.context.get('paginator'):
+                    count_check = response.context.get('paginator').count
+                    self.assertEqual(count_check, 1)
+                    response_context = response.context.get('page')[0]
+                else:
+                    response_context = response.context.get('post')                    
+                self.assertEqual(response_context.text, self.test_post.text)
+                self.assertEqual(response_context.author, self.user)
+                self.assertEqual(response_context.group, self.test_group)
 
 
-    def test_post_page_show_correct_context(self):
-        response = self.authorized_client.get(
-            reverse(
-            'post',
-            kwargs={'username': self.user.username,
-            'post_id': self.test_post.id})
-        )
-        self.assertEqual(
-            response.context.get('post').text,
-            self.test_post.text
-        )
-        self.assertEqual(
-            response.context.get('post').author,
-            self.user
-        )
-        self.assertEqual(
-            response.context.get('post').group,
-            self.test_group
-        )
-
-
-    def test_new_or_edit_post_show_correct_context(self):
-        for reverse_name in self.new_edit_post_pages:
+    def test_new_edit_pages_show_correct_context(self):
+        for reverse_name in self.new_edit_pages:
             response = self.authorized_client.get(reverse_name)
             form_fields = {
                 'group': forms.fields.ChoiceField,      
@@ -145,6 +128,30 @@ class ViewPagesTests(TestCase):
                     self.assertIsInstance(field, expected)
 
 
+    def test_newpost_on_index_group(self):
+        test_group2 = Group.objects.create(
+            title='Тестовое сообщество2',
+            slug='test-group2',
+        )
+        test_post2 = Post.objects.create(
+            text='Тестовый пост2',
+            author=self.user,
+            group=test_group2,
+        )
+        
+        newpost_pages = (
+            reverse('index'),
+            reverse('group_posts',
+            kwargs={'slug': test_group2.slug}),
+        )
+        
+        for reverse_name in newpost_pages:
+            with self.subTest(reverse_name=reverse_name):
+               response = self.authorized_client.get(reverse_name)
+               response_context_0 = response.context.get('page')[0].pk
+               self.assertEqual(response_context_0, test_post2.pk)
+
+
     def test_newpost_not_in_another_group(self):
         test_group2 = Group.objects.create(
             title='Тестовое сообщество2',
@@ -155,28 +162,19 @@ class ViewPagesTests(TestCase):
             author=self.user,
             group=test_group2,
         )
-        test_post3 = Post.objects.create(
-            text='Тестовый пост3',
-            author=self.user,
-            group=self.test_group,
-        )
 
         response = self.authorized_client.get(
-            reverse('group_posts', kwargs={'slug': 'test-group2'})
+            reverse('group_posts',
+            kwargs={'slug': self.test_group.slug})
         )
-        response_context = response.context.get('page')[0]
-        post_text_2 = response_context.text
-        post_author_2 = response_context.author
-        post_group_2 = response_context.group
-        self.assertNotEqual(post_text_2, test_post3.text)
-        self.assertEqual(post_author_2, self.user)
-        self.assertEqual(post_group_2, test_group2)
+        response_context_0 = response.context.get('page')[0].pk
+        self.assertNotEqual(response_context_0, test_post2.pk)
 
 
     def test_posts_quantity_on_index(self):
         for n in range(1, 20):
             Post.objects.create(
-            text=n+1,
+            text=1,
             author=self.user,
             pk=n+1,
         )
@@ -184,6 +182,7 @@ class ViewPagesTests(TestCase):
         response = self.authorized_client.get(reverse('index'))
         posts_on_page = response.context.get('paginator').per_page
         self.assertEqual(posts_on_page, constants.posts_per_page)
-        posts_on_page = response.context.get('page') 
-        posts_quantity = len(posts_on_page) <= 10
+
+        posts_on_index = response.context.get('paginator').page(1)
+        posts_quantity = len(posts_on_index) <= constants.posts_per_page
         self.assertTrue(posts_quantity)
