@@ -1,6 +1,6 @@
 {% extends "include/base.html" %}
 {% block title %}
-    {{ post_id|yesno:"Редактировать новую запись в сообществе, Создать новую запись в сообществе" }}
+    {{ post|yesno:"Редактировать новую запись в сообществе, Создать новую запись в сообществе" }}
 {% endblock %}
 {% block content %}
 {% load user_filters %}
@@ -9,7 +9,7 @@
     <div class="col-md-8 p-5">
         <div class="card">
             <div class="card-header">
-				{{ post_id|yesno:"Редактировать новую запись в сообществе,Создать новую запись в сообществе" }}
+				{{ post|yesno:"Редактировать новую запись в сообществе,Создать новую запись в сообществе" }}
 			</div>
             <div class="card-body">
 
@@ -37,7 +37,7 @@
 
                     <div class="col-md-6 offset-md-4">              
                             <button type="submit" class="btn btn-primary">
-							{{ post_id|yesno:"Сохранить,Добавить" }}
+							{{ post|yesno:"Сохранить,Добавить" }}
                             </button>                
 					</div>
                 </form>

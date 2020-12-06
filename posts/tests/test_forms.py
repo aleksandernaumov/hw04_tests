@@ -6,7 +6,6 @@ from .. import constants
 from ..forms import PostForm
 from ..models import Group, Post
 
-
 User = get_user_model()
 
 class PostFormTests(TestCase):

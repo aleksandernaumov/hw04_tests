@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.http import Http404
+from django.http import HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
 
 from . import constants
@@ -35,16 +35,12 @@ def group_posts(request, slug):
 
 @login_required
 def new_post(request):
-    if request.method == 'POST':
-        form = PostForm(request.POST)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            form.save()
-            return redirect('index')
-        return render(request, 'posts/newpost.html', {'form': form})
-
-    form = PostForm()
+    form = PostForm(request.POST or None)
+    if form.is_valid():
+        post = form.save(commit=False)
+        post.author = request.user
+        form.save()
+        return redirect('index')
     return render(request, 'posts/newpost.html', {'form': form})
 
 
@@ -64,13 +60,11 @@ def profile(request, username):
 
 
 def post_view(request, username, post_id):
-    author = get_object_or_404(User, username=username)
-    try:
-        post = author.posts.get(pk=post_id)
-    except Post.DoesNotExist:
-        raise Http404("Such author's post doesn't exist")
+    post = get_object_or_404(Post, pk=post_id)
+    if post.author.username != username:
+        return HttpResponseNotFound('<h1>Page not found</h1>')
     return render(
-        request, 'posts/post.html', {'post': post, 'author': author}
+        request, 'posts/post.html', {'post': post, 'author': post.author}
     )
 
 
@@ -78,14 +72,14 @@ def post_view(request, username, post_id):
 def post_edit(request, username, post_id):
     post = get_object_or_404(Post, pk=post_id)
     if post.author != request.user:
-        return redirect('post', username=username, post_id=post_id)
+        return HttpResponseNotFound('<h1>Page not found</h1>')
 
     form = PostForm(request.POST or None, instance=post)
 
-    if request.method == 'POST' and form.is_valid():
+    if form.is_valid():
         form.save()
         return redirect('post', username=username, post_id=post_id)
     return render(
         request, 'posts/newpost.html',
-        {'form': form, 'post_id': post_id, 'post': post}
+        {'form': form, 'post': post}
     )

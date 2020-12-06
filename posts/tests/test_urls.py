@@ -115,9 +115,4 @@ class PostsUrlTest(TestCase):
             kwargs = {'username': self.user,
             'post_id': self.test_post.id})
         )
-        self.assertRedirects(response, (
-            reverse(
-            'post', 
-            kwargs = {'username': self.user,
-            'post_id': self.test_post.id}))
-        )
+        self.assertEquals(response.status_code, 404)
