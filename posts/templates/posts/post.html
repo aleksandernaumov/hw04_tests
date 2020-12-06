@@ -1,0 +1,19 @@
+{% extends "include/base.html" %}
+{% block title %} Пост #{{ post.pk }} в сообществе "{{ post.group}}" от автора: {{ post.author.get_full_name }} {% endblock %}
+{% block header %} Пост #{{ post.pk }} в сообществе "{{ post.group}}" от автора: {{ post.author.get_full_name }} {% endblock %}
+
+{% block content %}
+<main role="main" class="container">
+    <div class="row">
+	
+	    {% include 'posts/include/author_column.html' %}
+
+        <div class="col-md-9">
+		    
+			{% include 'posts/include/post_item.html' %}
+
+        </div>
+    </div>
+</main>
+
+{% endblock %}

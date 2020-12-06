@@ -36,7 +36,9 @@ class PostFormTest(TestCase):
         for value, expected in field_verboses.items():
             with self.subTest(value=value):
                 self.assertEqual(
-                    test_group._meta.get_field(value).verbose_name, expected)
+                    test_group._meta.get_field(value).verbose_name,
+                    expected
+                )
 
 
     def test_post_verbose_name(self):
@@ -51,7 +53,9 @@ class PostFormTest(TestCase):
         for value, expected in field_verboses.items():
             with self.subTest(value=value):
                 self.assertEqual(
-                    test_post._meta.get_field(value).verbose_name, expected)
+                    test_post._meta.get_field(value).verbose_name,
+                    expected
+                )
 
 
     def test_group_help_text(self):
@@ -70,7 +74,9 @@ class PostFormTest(TestCase):
         for value, expected in field_verboses.items():
             with self.subTest(value=value):
                 self.assertEqual(
-                    test_post._meta.get_field(value).help_text, expected)
+                    test_post._meta.get_field(value).help_text,
+                    expected
+                )
 
 
     def test_group_name_is_title_field(self):

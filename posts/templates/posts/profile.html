@@ -1,0 +1,26 @@
+{% extends "include/base.html" %}
+{% block title %}Все записи пользователя: {{ author.get_full_name }}{% endblock %}
+{% block header %}Все записи пользователя: {{ author.get_full_name }}{% endblock %}
+
+{% block content %}
+
+<main role="main" class="container">
+    <div class="row">
+	
+        {% include 'posts/include/author_column.html' %}
+		
+        <div class="col-md-9">
+		
+			{% for post in page %}
+                {% include 'posts/include/post_item.html' %}
+		    {% endfor %}
+			
+		    {% if page.has_other_pages %}
+			    {% include "include/paginator.html" with items=page paginator=paginator %}
+		    {% endif %}	
+			
+        </div>
+    </div>
+</main>
+
+{% endblock %}

@@ -14,7 +14,6 @@ ALLOWED_HOSTS = [
 ]
 
 INSTALLED_APPS = [
-    'posts',
     'users',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -24,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.staticfiles',
+    'posts',    
 ]
 
 MIDDLEWARE = [

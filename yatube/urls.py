@@ -3,7 +3,7 @@ from django.contrib.flatpages import views
 from django.urls import include, path
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin!/', admin.site.urls),
     path('about/', include('django.contrib.flatpages.urls')),
     path('about-us/', views.flatpage, {'url': '/about-us/'}, name='about'),
     path('terms/', views.flatpage, {'url': '/terms/'}, name='terms'),
