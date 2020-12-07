@@ -183,6 +183,6 @@ class ViewPagesTests(TestCase):
         posts_on_page = response.context.get('paginator').per_page
         self.assertEqual(posts_on_page, constants.posts_per_page)
 
-        posts_on_index = response.context.get('paginator').page(1)
-        posts_quantity = len(posts_on_index) <= constants.posts_per_page
-        self.assertTrue(posts_quantity)
+        index = response.context.get('paginator').page(1)
+        posts_count = index.object_list.count() <= constants.posts_per_page
+        self.assertTrue(posts_count)
