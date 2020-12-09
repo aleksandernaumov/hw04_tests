@@ -27,7 +27,7 @@ class PostsUrlTest(TestCase):
             pk=100,
         )
         
-        cls.site1 = Site.objects.get(pk=1)
+        cls.site1 = Site.objects.filter()[0]
 
         var_flatpages = {
             'aboutauthor_page': '/about-author/',
@@ -98,10 +98,11 @@ class PostsUrlTest(TestCase):
     def test_login_required_urls_redirect_anonymous_on_loginpage(self):
         for var, redirect_url in self.template_login_required_urls.items():
             with self.subTest(url=redirect_url):
-                response = self.client.get(redirect_url, follow=True)                
+                response = self.client.get(redirect_url, follow=True)
+                login_page=reverse('login')               
                 self.assertRedirects(
                     response, 
-                    ('/auth/login/?next='+redirect_url)
+                    (f'{login_page}?next={redirect_url}')
                 )
 
 
@@ -116,3 +117,11 @@ class PostsUrlTest(TestCase):
             'post_id': self.test_post.id})
         )
         self.assertEquals(response.status_code, 404)
+
+
+    def test_page_404(self):
+        for template, url in self.template_guest_access_urls.items():
+            with self.subTest(url=url):
+                not_existing_url = 'not_existing' + url
+                response = self.client.get(not_existing_url)
+                self.assertEqual(response.status_code, 404)

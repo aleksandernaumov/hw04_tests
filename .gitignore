@@ -18,6 +18,7 @@ __pycache__/
 *.sublime-workspace
 
 static/
+media/
 posts/static/
 htmlcov/
 .coverage

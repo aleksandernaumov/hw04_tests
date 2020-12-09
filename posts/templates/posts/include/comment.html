@@ -1,0 +1,44 @@
+{% extends "include/base.html" %}
+{% block title %}Добавить комментарий к записи в сообществе{% endblock %}
+{% block header %}Добавить комментарий{% endblock %}
+
+{% block content %}
+{% load user_filters %}
+
+{% if user.is_authenticated %}
+<div class="card my-4">
+    <form method="post">
+        {% csrf_token %}
+        <h5 class="card-header">{{ form.text.label|safe }}</h5>
+        <div class="card-body">
+            <div class="form-group">
+                {{ form.text|addclass:"form-control" }}
+            </div>
+            <button type="submit" class="btn btn-primary">Отправить</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+{% if comments.exists %}
+<div>
+	<h4>Все комментарии (всего {{ comments.count }}):</h4>
+</div>
+{% endif %}
+
+{% for item in comments %}
+<div class="media card mb-4">
+    <div class="media-body card-body">	
+        <h5 class="mt-0">
+            <a href="{% url 'profile' item.author.username %}"
+               name="comment_{{ item.id }}">
+                {{ item.author.username }}
+            </a>
+        </h5>
+        <p>{{ item.text | linebreaksbr }}</p>
+		<small class="text-muted">{{ item.created|date:"d M Y г. H:i" }}</small>
+    </div>
+</div>
+{% endfor %} 
+
+{% endblock %}

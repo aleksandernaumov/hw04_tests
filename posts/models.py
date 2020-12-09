@@ -34,6 +34,10 @@ class Post(models.Model):
         blank=True, null=True, related_name='posts',
         verbose_name='Сообщество', help_text='Не обязательное поле'
     )
+    image = models.ImageField(
+        upload_to='posts/', blank=True, null=True,
+        verbose_name='Изображение', help_text='Не обязательное поле'
+    )
 
     class Meta:
         ordering = ['-pub_date']
@@ -44,3 +48,28 @@ class Post(models.Model):
         post_author = self.author
         post_text = self.text[:20]
         return f'{post_author} - {post_date:%d-%m-%Y} - {post_text} ...'
+
+
+class Comment(models.Model):
+    post = models.ForeignKey(
+        Post, on_delete=models.CASCADE, related_name='comments',
+        verbose_name='Запись в сообществе', help_text='Обязательное поле'
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='comments', verbose_name='Автор'
+    )
+    text = models.TextField('Текст', help_text='Обязательное поле')
+    created = models.DateTimeField(
+        'Дата комментария', auto_now_add=True
+    )
+
+    class Meta:
+        ordering = ['-created']
+        verbose_name_plural = 'Комментарии'
+
+    def __str__(self):
+        commentdate = self.created
+        commentauthor = self.author
+        commenttext = self.text[:20]
+        return f'{commentauthor} - {commentdate:%d-%m-%Y} - {commenttext} ...'

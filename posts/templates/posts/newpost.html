@@ -1,6 +1,6 @@
 {% extends "include/base.html" %}
 {% block title %}
-    {{ post|yesno:"Редактировать новую запись в сообществе, Создать новую запись в сообществе" }}
+    {{ post|yesno:"Редактировать новую запись в сообществе,Создать новую запись в сообществе" }}
 {% endblock %}
 {% block content %}
 {% load user_filters %}
@@ -19,7 +19,7 @@
                   </div>
                 {% endfor %}
 
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
                     {% for field in form %}

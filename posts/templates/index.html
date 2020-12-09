@@ -3,15 +3,16 @@
 {% block header %}Последние обновления на сайте{% endblock %}
 {% block content %}
 
+{% load cache %}
+{% cache 20 index_page %}
     {% for post in page %}
-    <h3>
-        Автор: {{ post.author.get_full_name }}, Дата публикации: {{ post.pub_date|date:"d M Y" }}
-    </h3>
-    <p>{{ post.text|linebreaksbr }}</p>
-    {% if not forloop.last %}<hr>{% endif %}
+	
+	{% include "posts/include/post_item.html" with post=post %}
+
     {% endfor %}
-    
-    {% if page.has_other_pages %}
+{% endcache %} 
+
+{% if page.has_other_pages %}
         {% include "include/paginator.html" with items=page paginator=paginator %}
     {% endif %}
 {% endblock %}

@@ -1,17 +1,23 @@
+import shutil
+import tempfile
+
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.flatpages.models import FlatPage
 from django.contrib.sites.models import Site
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from .. import constants
+from posts import constants
+
 from ..models import Group, Post
 
 
 class StaticURLTests(TestCase):
     def setUp(self):
-        self.site1 = Site.objects.get(pk=1)
+        self.site1 = Site.objects.filter()[0]
         self.aboutauthor_page = FlatPage.objects.create(
             url='/about-author/',
             title='Об авторе title',
@@ -46,6 +52,7 @@ class ViewPagesTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        settings.MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
         User = get_user_model()
         cls.user = User.objects.create(
             username='test_user'
@@ -57,10 +64,12 @@ class ViewPagesTests(TestCase):
             slug='test-group',
             description='test-group',
         )
+        cls.image = constants.uploaded
         cls.test_post = Post.objects.create(
             text='Тестовый пост',
             author=cls.user,
             group=cls.test_group,
+            image=constants.uploaded,
         )
 
         cls.posts_templates_pages = {
@@ -85,6 +94,12 @@ class ViewPagesTests(TestCase):
         )
 
 
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
+
+
     def test_posts_pages_uses_correct_template(self):        
         for template, reverse_name in self.posts_templates_pages.items():
             with self.subTest(reverse_name=reverse_name):
@@ -96,22 +111,28 @@ class ViewPagesTests(TestCase):
         for reverse_name in self.new_edit_pages:
             with self.subTest(reverse_name=reverse_name):
                 response = self.authorized_client.get(reverse_name)
-                self.assertTemplateUsed(response, 'posts/newpost.html') 
+                self.assertTemplateUsed(response, 'posts/newpost.html')
+            
 
-
+    def paginator_posts_count(self, response):        
+        self.count_check = response.context.get('paginator').count
+        return self.count_check
+  
     def test_posts_pages_show_correct_context(self):
         for template, reverse_name in self.posts_templates_pages.items():
-            with self.subTest():
+            with self.subTest(reverse_name=reverse_name):
                 response = self.authorized_client.get(reverse_name)
                 if response.context.get('paginator'):
-                    count_check = response.context.get('paginator').count
-                    self.assertEqual(count_check, 1)
+                    all_posts_count = Post.objects.count()
+                    count_check = self.paginator_posts_count(response)
+                    self.assertEqual(count_check, all_posts_count)
                     response_context = response.context.get('page')[0]
                 else:
-                    response_context = response.context.get('post')                    
+                    response_context = response.context.get('post')
                 self.assertEqual(response_context.text, self.test_post.text)
                 self.assertEqual(response_context.author, self.user)
                 self.assertEqual(response_context.group, self.test_group)
+                self.assertEqual(response_context.image.size, self.image.size)
 
 
     def test_new_edit_pages_show_correct_context(self):
@@ -129,38 +150,50 @@ class ViewPagesTests(TestCase):
 
 
     def test_newpost_on_index_group(self):
-        test_group2 = Group.objects.create(
+        group2 = Group.objects.create(
             title='Тестовое сообщество2',
             slug='test-group2',
         )
-        test_post2 = Post.objects.create(
+        post2 = Post.objects.create(
             text='Тестовый пост2',
             author=self.user,
-            group=test_group2,
+            group=group2,
         )
         
-        newpost_pages = (
-            reverse('index'),
-            reverse('group_posts',
-            kwargs={'slug': test_group2.slug}),
-        )
+        newpost_pages = {
+            'index': reverse('index'),
+            'group_posts': reverse('group_posts',
+            kwargs={'slug': group2.slug}),
+        }
         
-        for reverse_name in newpost_pages:
+        for page, reverse_name in newpost_pages.items():
             with self.subTest(reverse_name=reverse_name):
-               response = self.authorized_client.get(reverse_name)
-               response_context_0 = response.context.get('page')[0].pk
-               self.assertEqual(response_context_0, test_post2.pk)
+                response = self.authorized_client.get(reverse_name)
+                response_context_0 = response.context.get('page')[0]
+                self.assertEqual(response_context_0.pk, post2.pk)
+                self.assertEqual(response_context_0.text, post2.text)
+                self.assertEqual(response_context_0.author, self.user)
+                self.assertEqual(response_context_0.group, post2.group)
+
+                if page == 'group_posts':
+                    posts = Post.objects.filter(group=post2.group).count()
+                    paginator_posts = self.paginator_posts_count(response)
+                    self.assertEqual(paginator_posts, posts)
+                else:
+                    posts = Post.objects.count()
+                    paginator_posts = self.paginator_posts_count(response)
+                    self.assertEqual(paginator_posts, posts)
 
 
     def test_newpost_not_in_another_group(self):
-        test_group2 = Group.objects.create(
+        group2 = Group.objects.create(
             title='Тестовое сообщество2',
             slug='test-group2',
         )
-        test_post2 = Post.objects.create(
+        post2 = Post.objects.create(
             text='Тестовый пост2',
             author=self.user,
-            group=test_group2,
+            group=group2,
         )
 
         response = self.authorized_client.get(
@@ -168,7 +201,10 @@ class ViewPagesTests(TestCase):
             kwargs={'slug': self.test_group.slug})
         )
         response_context_0 = response.context.get('page')[0].pk
-        self.assertNotEqual(response_context_0, test_post2.pk)
+        self.assertEqual(response_context_0, self.test_post.pk)
+        posts = Post.objects.filter(group=self.test_post.group).count()
+        paginator_posts = self.paginator_posts_count(response)
+        self.assertEqual(paginator_posts, posts)
 
 
     def test_posts_quantity_on_index(self):
@@ -186,3 +222,19 @@ class ViewPagesTests(TestCase):
         index = response.context.get('paginator').page(1)
         posts_count = index.object_list.count() <= constants.posts_per_page
         self.assertTrue(posts_count)
+
+        all_posts_count = Post.objects.count()
+        paginator_posts_count = self.paginator_posts_count(response)
+        self.assertEqual(all_posts_count, paginator_posts_count)
+
+
+    def test_index_cache(self):
+        self.assertEqual(Post.objects.count(), 1)
+        response1 = self.client.get(reverse('index')).content
+        Post.objects.all().delete()
+        self.assertEqual(Post.objects.count(), 0)
+        response2 = self.client.get(reverse('index')).content
+        self.assertEqual(response1, response2)
+        cache.clear()
+        response3 = self.client.get(reverse('index')).content
+        self.assertNotEqual(response1, response3)

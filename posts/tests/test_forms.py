@@ -1,8 +1,13 @@
+import shutil
+import tempfile
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from .. import constants
+from posts import constants
+
 from ..forms import PostForm
 from ..models import Group, Post
 
@@ -12,6 +17,7 @@ class PostFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        settings.MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
         cls.form = PostForm()
         cls.test_user = User.objects.create(
             username='test_user'
@@ -23,6 +29,13 @@ class PostFormTests(TestCase):
             slug='test-group',
             description='test-group',
         )
+        cls.image = constants.small_gif
+
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
 
 
     def test_form_labels(self):
@@ -40,6 +53,7 @@ class PostFormTests(TestCase):
 
 
     def test_create_post(self):
+        posts_count = Post.objects.count()
         form_data = {
             'text': 'Создаем новую запись в группе',
             'group': self.test_group.id,
@@ -50,11 +64,12 @@ class PostFormTests(TestCase):
             data=form_data,
             follow=True
         )
+        self.assertEqual(Post.objects.count(), posts_count+1)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(Post.objects.count(), 1)
-        self.assertEqual(Post.objects.get(id=1).text, form_data['text'])
-        self.assertEqual(Post.objects.get(id=1).group.id, form_data['group'])
-        self.assertEqual(Post.objects.get(id=1).author.id, self.test_user.id)
+        last_object = Post.objects.filter().order_by('-id')[0]
+        self.assertEqual(last_object.text, form_data['text'])
+        self.assertEqual(last_object.group, self.test_group)
+        self.assertEqual(last_object.author, self.test_user)
 
 
     def test_edit_post(self):
@@ -65,7 +80,7 @@ class PostFormTests(TestCase):
         test_post = Post.objects.create(
             text='Тестовый текст записи',
             author=self.test_user,
-            )
+        )
 
         kwargs = {'username': 'test_user', 'post_id': test_post.id}
 
@@ -74,16 +89,12 @@ class PostFormTests(TestCase):
             data=form_data_edit,
             follow=True
         )
-        self.assertRedirects(response, reverse('post', kwargs=kwargs))
-        self.assertEqual(
-            Post.objects.get(id=test_post.id).text,
-            form_data_edit['text']
-        )
-        self.assertEqual(
-            Post.objects.get(id=test_post.id).group.id,
-            form_data_edit['group']
-        )
+        test_post.refresh_from_db()
         self.assertEqual(Post.objects.count(), 1)
+        self.assertRedirects(response, reverse('post', kwargs=kwargs))
+        self.assertEqual(test_post.text, form_data_edit['text'])
+        self.assertEqual(test_post.group, self.test_group)
+        self.assertEqual(test_post.author, self.test_user)
 
 
     def test_create_post_guest(self):
@@ -97,8 +108,8 @@ class PostFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(Post.objects.count(), 0)
+        self.assertEqual(response.status_code, 200)
 
 
     def test_edit_post_guest(self):
@@ -109,7 +120,8 @@ class PostFormTests(TestCase):
         test_post = Post.objects.create(
             text='Тестовый текст записи',
             author=self.test_user,
-            )
+            group=self.test_group,
+        )
 
         kwargs = {'username': 'test_user', 'post_id': test_post.id}
 
@@ -118,10 +130,10 @@ class PostFormTests(TestCase):
             data=form_data_edit,
             follow=True
         )
-        self.assertNotEqual(
-            Post.objects.get(id=test_post.id).text,
-            form_data_edit['text']
-        )
+        test_post.refresh_from_db()
+        self.assertNotEqual(test_post.text, form_data_edit['text'])
+        self.assertEqual(test_post.group, self.test_group)
+        self.assertEqual(test_post.author, self.test_user)
 
 
     def test_edit_post_not_author(self):
@@ -132,7 +144,8 @@ class PostFormTests(TestCase):
         test_post = Post.objects.create(
             text='Тестовый текст записи',
             author=self.test_user,
-            )
+            group=self.test_group,
+        )
 
         not_author_user = User.objects.create(
             username='not_author'
@@ -147,7 +160,23 @@ class PostFormTests(TestCase):
             data=form_data_edit,
             follow=True
         )
-        self.assertNotEqual(
-            Post.objects.get(id=test_post.id).text,
-            form_data_edit['text']
+        test_post.refresh_from_db()
+        self.assertNotEqual(test_post.text, form_data_edit['text'])
+        self.assertEqual(test_post.group, self.test_group)
+        self.assertEqual(test_post.author, self.test_user)
+
+
+    def test_create_post_with_image(self):
+        posts_count = Post.objects.count()
+        form_data = {
+            'title': 'Тестовый заголовок',
+            'text': 'Тестовый текст',
+            'image': constants.uploaded,
+        }
+        response = self.authorized_client.post(
+            reverse('new_post'),
+            data=form_data,
+            follow=True
         )
+        self.assertEqual(Post.objects.count(), posts_count+1)
+        self.assertRedirects(response, reverse('index'))
